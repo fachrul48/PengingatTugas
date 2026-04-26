@@ -1,0 +1,381 @@
+import React, { useState, useEffect } from 'react';
+import { Flower2, Plus, Check, Trash2, Leaf, Sparkles, BookOpen, Calendar } from 'lucide-react';
+
+export default function App() {
+  // --- PRE-LOADED DATA ---
+  // Data tugas awal berdasarkan input yang digabungkan agar lebih ringkas (mengurangi beban kognitif)
+  const initialTasks = [
+    {
+      id: 101,
+      text: "Tugas Latihan: Tabel Distribusi Frekuensi & Visualisasi (Data 50-100)",
+      subject: "Statistika dan Probabilitas",
+      completed: false, 
+      deadline: "2026-04-08",
+      createdAt: new Date('2026-04-08T12:00:00').toISOString()
+    },
+    {
+      id: 102,
+      text: "Soal Latihan Pertemuan 2 (Rentang nilai)",
+      subject: "Statistika dan Probabilitas",
+      completed: true, 
+      deadline: "2026-03-25",
+      createdAt: new Date('2026-03-25T12:30:00').toISOString()
+    },
+    {
+      id: 103,
+      text: "Tugas Mandiri: ERD Sistem Inventaris Toko Retail",
+      subject: "Manajemen Data dan Informasi",
+      completed: false, 
+      deadline: "2026-04-14",
+      createdAt: new Date('2026-04-14T00:00:00').toISOString()
+    }
+  ];
+
+  // --- STATE MANAGEMENT ---
+  const [tasks, setTasks] = useState(initialTasks);
+  const [newTaskText, setNewTaskText] = useState('');
+  const [selectedSubject, setSelectedSubject] = useState('');
+  const [newDeadline, setNewDeadline] = useState('');
+  const [encouragement, setEncouragement] = useState('Hai Vira! Tarik napas panjang, mari kita mulai hari ini perlahan-lahan. 🌸');
+  const [bloomActive, setBloomActive] = useState(false);
+
+  // Semester 4 Subjects
+  const subjects = [
+    'Kewarganegaraan',
+    'Internet of Things',
+    'Rekayasa Perangkat Lunak',
+    'Pengantar Keamanan Informasi',
+    'Sistem Informasi dan Layanan TI',
+    'Statistika dan Probabilitas',
+    'AIK IV',
+    'Manajemen Data dan Informasi',
+    'Lainnya...'
+  ];
+
+  const encouragements = {
+    add: [
+      "Satu langkah kecil, kamu pasti bisa, Vira!",
+      "Catat dulu, kerjakan perlahan. Semangat!",
+      "Tugas baru ditambahkan. Jangan lupa minum air ya. 🍵"
+    ],
+    complete: [
+      "Hebat! Satu bunga lagi mekar untukmu, Vira. 🌺",
+      "Wah, kamu luar biasa! Bangga deh sama progresmu hari ini. ✨",
+      "Pelan tapi pasti, kamu berhasil menyelesaikannya!",
+      "Terima kasih sudah berjuang hari ini, Vira."
+    ],
+    empty: [
+      "Tamanmu sedang menunggumu untuk disiram dengan pencapaian kecil. 🌱",
+      "Hari yang baru, lembaran yang baru. Yuk mulai pelan-pelan."
+    ]
+  };
+
+  // Load from local storage on mount (dengan penggabungan seed data)
+  useEffect(() => {
+    const savedTasks = localStorage.getItem('viraTasks');
+    if (savedTasks) {
+      const parsedTasks = JSON.parse(savedTasks);
+      
+      // Mencegah pre-loaded data terhapus jika local storage kosong pada percobaan pertama
+      // Ini hanya untuk keperluan demonstrasi/Proof of Concept
+      if (parsedTasks.length === 0) {
+        setTasks(initialTasks);
+      } else {
+        // Jika user belum pernah punya task 101, 102, 103, kita gabungkan (opsional)
+        const hasPreloaded = parsedTasks.some(t => t.id === 101 || t.id === 102);
+        if (!hasPreloaded) {
+           setTasks([...initialTasks, ...parsedTasks]);
+        } else {
+           setTasks(parsedTasks);
+        }
+      }
+    }
+  }, []);
+
+  // Save to local storage whenever tasks change
+  useEffect(() => {
+    localStorage.setItem('viraTasks', JSON.stringify(tasks));
+    if (tasks.filter(t => !t.completed).length === 0 && tasks.length > 0) {
+      setEncouragement("Semua tugas selesai! Kamu hebat banget, Vira. Selamat istirahat! 🛋️");
+    }
+  }, [tasks]);
+
+  // --- HANDLERS ---
+  const handleAddTask = (e) => {
+    e.preventDefault();
+    if (!newTaskText.trim() || !selectedSubject) return;
+
+    const newTask = {
+      id: Date.now(),
+      text: newTaskText,
+      subject: selectedSubject,
+      completed: false,
+      deadline: newDeadline, // Menyimpan deadline baru
+      createdAt: new Date().toISOString()
+    };
+
+    setTasks([newTask, ...tasks]);
+    setNewTaskText('');
+    setNewDeadline(''); // Reset deadline form
+    setEncouragement(encouragements.add[Math.floor(Math.random() * encouragements.add.length)]);
+  };
+
+  const handleCompleteTask = (id) => {
+    setTasks(tasks.map(t => {
+      if (t.id === id && !t.completed) {
+        triggerBloom();
+        setEncouragement(encouragements.complete[Math.floor(Math.random() * encouragements.complete.length)]);
+        return { ...t, completed: true };
+      }
+      // Allow unchecking without animation
+      if (t.id === id && t.completed) {
+         return { ...t, completed: false };
+      }
+      return t;
+    }));
+  };
+
+  const handleDeleteTask = (id) => {
+    setTasks(tasks.filter(t => t.id !== id));
+  };
+
+  const triggerBloom = () => {
+    setBloomActive(true);
+    setTimeout(() => setBloomActive(false), 2000); // Bloom animation duration
+  };
+
+  const completedTasksCount = tasks.filter(t => t.completed).length;
+
+  // Helper untuk format tanggal menjadi lebih ramah dibaca (contoh: 14 Apr 2026)
+  const formatDateFriendly = (dateString) => {
+    if (!dateString) return '';
+    const options = { day: 'numeric', month: 'short', year: 'numeric' };
+    return new Date(dateString).toLocaleDateString('id-ID', options);
+  };
+
+  // --- INLINE STYLES FOR ANIMATIONS & FONT ---
+  const injectedStyles = `
+    @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&display=swap');
+    
+    body {
+      background-color: #FFFFF4; /* Ivory */
+      font-family: 'Quicksand', sans-serif;
+      color: #5B4B70;
+    }
+
+    /* Soft shadow for depth without harshness */
+    .soft-shadow {
+      box-shadow: 0 8px 24px rgba(225, 212, 241, 0.4);
+    }
+
+    /* Non-blocking Bloom Animation */
+    .bloom-overlay {
+      pointer-events: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 50;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .bloom-flower {
+      animation: bloom 2s ease-out forwards;
+    }
+
+    @keyframes bloom {
+      0% { transform: scale(0) rotate(-45deg); opacity: 0; filter: blur(4px); }
+      30% { transform: scale(1.5) rotate(15deg); opacity: 1; filter: blur(0px); }
+      70% { transform: scale(1.2) rotate(0deg); opacity: 1; }
+      100% { transform: scale(2) rotate(20deg); opacity: 0; filter: blur(10px); }
+    }
+
+    /* Garden pop-in animation */
+    .flower-pop {
+      animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+
+    @keyframes popIn {
+      0% { transform: scale(0) translateY(10px); opacity: 0; }
+      100% { transform: scale(1) translateY(0); opacity: 1; }
+    }
+  `;
+
+  return (
+    <div className="min-h-screen pb-12">
+      <style>{injectedStyles}</style>
+
+      {/* Bloom Overlay Reward */}
+      {bloomActive && (
+        <div className="bloom-overlay">
+          <div className="bloom-flower text-[#FFB7B2]">
+            <Flower2 size={180} strokeWidth={1.5} />
+          </div>
+        </div>
+      )}
+
+      {/* Main Container */}
+      <div className="max-w-2xl mx-auto px-4 pt-10">
+        
+        {/* Header & Encouragement */}
+        <div className="mb-10 text-center">
+          <h1 className="text-4xl font-bold text-[#A890D3] mb-4 flex justify-center items-center gap-3">
+            <Sparkles className="text-[#FFB7B2]" />
+            TaskReminderVira
+            <Sparkles className="text-[#FFB7B2]" />
+          </h1>
+          <div className="bg-[#FFF4F2] text-[#E08A84] py-4 px-6 rounded-3xl soft-shadow font-semibold text-lg inline-block transition-all duration-300">
+            {encouragement}
+          </div>
+        </div>
+
+        {/* Input Section */}
+        <div className="bg-[#EAE0F5] p-6 rounded-[32px] soft-shadow mb-8">
+          <form onSubmit={handleAddTask} className="flex flex-col gap-4">
+            
+            <div className="relative">
+              <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                <BookOpen className="text-[#A890D3]" size={20} />
+              </div>
+              <select 
+                value={selectedSubject}
+                onChange={(e) => setSelectedSubject(e.target.value)}
+                className="w-full bg-white text-[#5B4B70] pl-12 pr-4 py-4 rounded-3xl appearance-none focus:outline-none focus:ring-4 focus:ring-[#D8B4E2] transition-all cursor-pointer font-semibold"
+                required
+              >
+                <option value="" disabled>Pilih Mata Kuliah...</option>
+                {subjects.map(sub => (
+                  <option key={sub} value={sub}>{sub}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-4">
+              <input 
+                type="text" 
+                placeholder="Apa yang perlu Vira kerjakan?"
+                value={newTaskText}
+                onChange={(e) => setNewTaskText(e.target.value)}
+                className="flex-[2] bg-white pl-6 pr-4 py-4 rounded-3xl focus:outline-none focus:ring-4 focus:ring-[#D8B4E2] transition-all font-medium placeholder-[#B8B8B8]"
+                required
+              />
+              <div className="relative flex-1">
+                 <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                    <Calendar className="text-[#A890D3]" size={18} />
+                 </div>
+                 <input 
+                   type="date" 
+                   value={newDeadline}
+                   onChange={(e) => setNewDeadline(e.target.value)}
+                   className="w-full bg-white pl-10 pr-4 py-4 rounded-3xl focus:outline-none focus:ring-4 focus:ring-[#D8B4E2] transition-all font-medium text-[#5B4B70]"
+                 />
+              </div>
+              <button 
+                type="submit"
+                className="bg-[#FFB7B2] hover:bg-[#FF9B94] text-white font-bold py-4 px-8 rounded-3xl flex justify-center items-center gap-2 transition-transform hover:scale-105 active:scale-95 shadow-md"
+              >
+                <Plus size={20} />
+                Tambah
+              </button>
+            </div>
+          </form>
+        </div>
+
+        {/* Task List Section */}
+        <div className="mb-10">
+          <h2 className="text-2xl font-bold text-[#A890D3] mb-4 px-2">Daftar Tugasmu 📝</h2>
+          
+          {tasks.filter(t => !t.completed).length === 0 ? (
+            <div className="bg-white/60 border-2 border-dashed border-[#D8B4E2] rounded-[32px] p-8 text-center text-[#A890D3]">
+              <Leaf className="mx-auto mb-3 opacity-50" size={32} />
+              <p className="font-semibold">Yeay! Tidak ada tugas yang tertunda. <br/>Vira boleh rebahan dulu~</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {tasks.filter(t => !t.completed).map(task => (
+                <div key={task.id} className="bg-white p-5 rounded-3xl flex items-center justify-between gap-4 soft-shadow group hover:bg-[#FDFBFF] transition-colors">
+                  <div className="flex items-center gap-4 flex-1">
+                    <button 
+                      onClick={() => handleCompleteTask(task.id)}
+                      className="w-8 h-8 rounded-full border-2 border-[#D8B4E2] hover:bg-[#D8B4E2] hover:text-white flex items-center justify-center transition-all flex-shrink-0 text-transparent"
+                    >
+                      <Check size={16} strokeWidth={3} />
+                    </button>
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2 mb-1">
+                        <span className="text-xs font-bold text-[#FFB7B2] bg-[#FFF4F2] px-2 py-1 rounded-xl block w-max">
+                          {task.subject}
+                        </span>
+                        {task.deadline && (
+                          <span className="text-xs font-semibold text-[#A890D3] bg-[#F8F3FC] px-2 py-1 rounded-xl flex items-center gap-1 w-max border border-[#EAE0F5]">
+                            <Calendar size={12} /> {formatDateFriendly(task.deadline)}
+                          </span>
+                        )}
+                      </div>
+                      <p className="font-semibold text-lg">{task.text}</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => handleDeleteTask(task.id)}
+                    className="text-[#E08A84] hover:text-red-500 hover:bg-red-50 p-2 rounded-full transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"
+                    aria-label="Hapus tugas"
+                  >
+                    <Trash2 size={20} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Garden Progress Section */}
+        <div className="bg-[#F8F3FC] border border-[#EAE0F5] p-6 rounded-[32px] soft-shadow">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-[#A890D3] flex items-center gap-2">
+              <Flower2 /> Taman Tugas Vira
+            </h2>
+            <span className="bg-[#D8B4E2] text-white px-4 py-1 rounded-full font-bold text-sm">
+              {completedTasksCount} Bunga Mekar
+            </span>
+          </div>
+          
+          <div className="bg-white rounded-3xl p-6 min-h-[160px] flex flex-wrap gap-4 items-start justify-start border-b-8 border-[#EAE0F5]">
+            {completedTasksCount === 0 ? (
+              <div className="w-full h-full flex flex-col justify-center items-center text-[#C4B5DA] opacity-60 mt-4">
+                <Leaf size={40} className="mb-2" />
+                <p className="font-medium text-center">Taman masih kosong.<br/>Selesaikan 1 tugas untuk menanam bunga pertamamu!</p>
+              </div>
+            ) : (
+              // Rendering the "Garden" based on completed tasks
+              tasks.filter(t => t.completed).map((task, i) => (
+                <div 
+                  key={task.id} 
+                  className="flower-pop relative group cursor-help"
+                  style={{ animationDelay: `${(i % 10) * 0.1}s` }}
+                  title={`Selesai: ${task.text}`}
+                >
+                  <Flower2 
+                    size={48} 
+                    className="text-[#FFB7B2] drop-shadow-sm hover:scale-110 transition-transform" 
+                    fill="#FFF4F2"
+                    strokeWidth={1.5}
+                  />
+                  {/* Tooltip on hover */}
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-[150px] bg-white text-[#5B4B70] text-xs p-2 rounded-xl soft-shadow opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity text-center font-semibold z-10">
+                    {task.text}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+          <p className="text-center text-sm font-medium text-[#A890D3] mt-4 opacity-70">
+            Setiap bunga adalah bukti usahamu hari ini. Keep going! 🌱
+          </p>
+        </div>
+
+      </div>
+    </div>
+  );
+}
